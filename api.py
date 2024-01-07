@@ -13,7 +13,7 @@ _event_logic = logic.EventLogic()
 class ApiException(Exception):
     pass
 
-def check_data(data: dict, _id = None) -> model.Event:
+def check_data(data: dict, _id = None, change_data: bool = False) -> model.Event:
     year = int(data.get('year'))
     month = int(data.get('month'))
     day = int(data.get('day'))
@@ -23,8 +23,9 @@ def check_data(data: dict, _id = None) -> model.Event:
         raise ApiException('Invalid date format')
     event = model.Event()
     events = _event_logic.list()
+
     for item in events:
-        if item.date == date:
+        if item.date == date and change_data == False:
             raise ApiException('An event has already been scheduled for the specified date')
     if _id == None:
         event.id = None
@@ -99,30 +100,42 @@ def update(_id: str):
                  'day': request.form.get("day"),
                  'title': request.form.get("title"),
                  'text': request.form.get("text")}
-
+        change_date = False
+        change_body = False
+        change_data = False
         old_evnt = _event_logic.read(_id)
         # проверка на смену даты ивента
         if data['year'] == None and data['month'] == None and data['day'] == None:
             data['year'] = old_evnt['year']
             data['month'] = old_evnt['month']
             data['day'] = old_evnt['day']
+            change_date = False
         elif data['year'] == None and data['month'] == None:
             data['year'] = old_evnt['year']
             data['month'] = old_evnt['month']
+            change_date = True
         elif data['year'] == None:
             data['year'] = old_evnt['year']
+            change_date = True
         else:
             pass
+
         # проверка на смену содержимого ивента
         if data['title'] == None and data['text'] == None:
             data['title'] = old_evnt['title']
             data['text'] = old_evnt['text']
+            change_body = False
         elif data['title'] == None:
             data['title'] = old_evnt['title']
+            change_body = True
+        elif data['text'] == None:
+            data['text'] = old_evnt['text']
+            change_body = True
         else:
             pass
-
-        validate_data = check_data(data, _id)
+        if change_date == False and change_body == False:
+            change_data = False
+        validate_data = check_data(data, _id, change_data)
         _event_logic.update(_id, validate_data)
         return "updated", 200
     except Exception as ex:
