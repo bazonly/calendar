@@ -13,7 +13,7 @@ _event_logic = logic.EventLogic()
 class ApiException(Exception):
     pass
 
-def check_data(data: dict, _id = None, change_data: bool = False) -> model.Event:
+def check_data(data: dict, _id = None, change_date: bool = False, change_body: bool = False) -> model.Event:
     year = int(data.get('year'))
     month = int(data.get('month'))
     day = int(data.get('day'))
@@ -24,9 +24,16 @@ def check_data(data: dict, _id = None, change_data: bool = False) -> model.Event
     event = model.Event()
     events = _event_logic.list()
 
-    for item in events:
-        if item.date == date and change_data == False:
-            raise ApiException('An event has already been scheduled for the specified date')
+    if ((change_date == False and change_body == False) or
+            (change_date == True and change_body == True) or
+            (change_date == True and change_body == False)):
+        for item in events:
+            if item.date == date:
+                raise ApiException('An event has already been scheduled for the specified date')
+    elif change_body == True and change_date == False:
+        pass
+
+
     if _id == None:
         event.id = None
     else:
@@ -64,7 +71,7 @@ def create():
                  'day': day,
                  'title': title,
                  'text': text}
-        validate_data = check_data(data, None)
+        validate_data = check_data(data)
         event = _event_logic.create(validate_data)
         return f"new id: {event}", 201
     except Exception as ex:
@@ -102,7 +109,6 @@ def update(_id: str):
                  'text': request.form.get("text")}
         change_date = False
         change_body = False
-        change_data = False
         old_evnt = _event_logic.read(_id)
         # проверка на смену даты ивента
         if data['year'] == None and data['month'] == None and data['day'] == None:
@@ -133,9 +139,7 @@ def update(_id: str):
             change_body = True
         else:
             pass
-        if change_date == False and change_body == False:
-            change_data = False
-        validate_data = check_data(data, _id, change_data)
+        validate_data = check_data(data, _id, change_date, change_body)
         _event_logic.update(_id, validate_data)
         return "updated", 200
     except Exception as ex:
